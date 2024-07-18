@@ -1,4 +1,2 @@
 keys/
 .terraform/providers/
-
-.terraform.lock.hcl
