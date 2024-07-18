@@ -22,6 +22,18 @@ provider "azurerm" {
   features {}
 }
 
+variable "DOCKER_USERNAME" {
+  description = "acr username"
+  type = string
+  default = "username"
+}
+
+variable "DOCKER_PASSWORD" {
+  description = "acr password"
+  type = string
+  default = "password"
+}
+
 # Create a resource group
 resource "azurerm_resource_group" "resource_group" {
   name     = "jk-example-resource-group2"
@@ -263,7 +275,11 @@ resource "azurerm_linux_virtual_machine" "vm1" {
     version   = "latest"
   }
 
-  custom_data = filebase64("cloud-init.yml")
+  custom_data = base64encode(templatefile("cloud-init.yml", {
+       DOCKER_USERNAME = var.DOCKER_USERNAME,
+       DOCKER_PASSWORD = var.DOCKER_PASSWORD
+     }))
+
 
 }
 
@@ -295,5 +311,8 @@ resource "azurerm_linux_virtual_machine" "vm2" {
     version   = "latest"
   }
 
-  custom_data = filebase64("cloud-init.yml")
+  custom_data = base64encode(templatefile("cloud-init.yml", {
+       DOCKER_USERNAME = var.DOCKER_USERNAME,
+       DOCKER_PASSWORD = var.DOCKER_PASSWORD
+     }))
 }

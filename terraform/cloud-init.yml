@@ -15,6 +15,7 @@ packages:
   - unattended-upgrades
 
 runcmd:
+  - docker login parkanizeracr2024.azurecr.io -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
   - docker pull parkanizeracr2024.azurecr.io/grupa1/app:latest
   - docker run -d -p 8080:8080 parkanizeracr2024.azurecr.io/grupa1/app:latest
 
