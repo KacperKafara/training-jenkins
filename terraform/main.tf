@@ -74,7 +74,7 @@ resource "azurerm_lb_rule" "lb_rule" {
   name                           = "jk-example-lb-rule"
   protocol                       = "Tcp"
   frontend_port                  = 80
-  backend_port                   = 80
+  backend_port                   = 8080
   frontend_ip_configuration_name = azurerm_lb.load_balancer.frontend_ip_configuration[0].name
   backend_address_pool_ids = [azurerm_lb_backend_address_pool.backend_pool.id]
   probe_id = azurerm_lb_probe.probe.id
@@ -89,7 +89,7 @@ resource "azurerm_lb_backend_address_pool" "backend_pool" {
 resource "azurerm_lb_probe" "probe" {
   loadbalancer_id = azurerm_lb.load_balancer.id
   name            = "jk-example-healthprobe"
-  port            = 80
+  port            = 8080
 }
 
 # # Create Network Interface
@@ -262,6 +262,9 @@ resource "azurerm_linux_virtual_machine" "vm1" {
     sku       = "22_04-lts"
     version   = "latest"
   }
+
+  custom_data = filebase64("cloud-init.yml")
+
 }
 
 #Create vm
@@ -277,7 +280,7 @@ resource "azurerm_linux_virtual_machine" "vm2" {
 
   admin_ssh_key {
     username   = "adminusername"
-    public_key = file("keys//key_vm2.pub")
+    public_key = file("keys/key_vm2.pub")
   }
 
   os_disk {
@@ -291,4 +294,6 @@ resource "azurerm_linux_virtual_machine" "vm2" {
     sku       = "22_04-lts"
     version   = "latest"
   }
+
+  custom_data = filebase64("cloud-init.yml")
 }
