@@ -390,6 +390,7 @@ resource "azurerm_postgresql_flexible_server" "postgres_server" {
   resource_group_name = azurerm_resource_group.resource_group.name
   location            = azurerm_resource_group.resource_group.location
   version             = "16"
+  zone                = "1"
 
   administrator_login          = var.DATABASE_LOGIN
   administrator_password       = var.DATABASE_PASSWORD
