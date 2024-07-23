@@ -54,7 +54,7 @@ variable "DATABASE_NAME" {
 
 # Create a resource group
 resource "azurerm_resource_group" "resource_group" {
-  name     = "jk-example-resource-group2"
+  name     = "group1"
   location = "Poland Central"
 }
 
@@ -63,7 +63,7 @@ resource "azurerm_virtual_network" "vnet" {
   name                = "jk-example-vnet"
   location            = azurerm_resource_group.resource_group.location
   resource_group_name = azurerm_resource_group.resource_group.name
-  address_space       = ["10.0.0.0/16"]
+  address_space       = ["22.0.0.0/16"]
 }
 
 #Create subnet for machines to load balancer communication
@@ -71,7 +71,7 @@ resource "azurerm_subnet" "subnet" {
   name                 = "jk-example-subnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
+  address_prefixes     = ["22.0.1.0/24"]
 }
 
 #=====================================================
@@ -120,7 +120,7 @@ resource "azurerm_lb_backend_address_pool" "backend_pool" {
 resource "azurerm_lb_probe" "probe" {
   loadbalancer_id = azurerm_lb.load_balancer.id
   name            = "jk-example-healthprobe"
-  port            = 8080
+  port            = 80
 }
 
 # # Create Network Interface
@@ -138,18 +138,26 @@ resource "azurerm_lb_probe" "probe" {
 # }
 
 # Associate Network Interface to the Backend Pool of the Load Balancer
-resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association_vm1" {
-  network_interface_id    = azurerm_network_interface.vm1_nic1.id
-  ip_configuration_name   = azurerm_network_interface.vm1_nic1.ip_configuration[0].name
+resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association" {
+  count = length(module.vm.load_balancer_nic)
+  network_interface_id    = module.vm.load_balancer_nic[count.index].id
+  ip_configuration_name   = module.vm.load_balancer_nic[count.index].ip_configuration[0].name
   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
 }
 
+# # Associate Network Interface to the Backend Pool of the Load Balancer
+# resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association_vm1" {
+#   network_interface_id    = azurerm_network_interface.vm1_nic1.id
+#   ip_configuration_name   = azurerm_network_interface.vm1_nic1.ip_configuration[0].name
+#   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
+# }
+
 # Associate Network Interface to the Backend Pool of the Load Balancer
-resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association_vm2" {
-  network_interface_id    = azurerm_network_interface.vm2_nic1.id
-  ip_configuration_name   = azurerm_network_interface.vm2_nic1.ip_configuration[0].name
-  backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
-}
+# resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association_vm2" {
+#   network_interface_id    = azurerm_network_interface.vm2_nic1.id
+#   ip_configuration_name   = azurerm_network_interface.vm2_nic1.ip_configuration[0].name
+#   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
+# }
 
 # Create Network Security Group and rules
 resource "azurerm_network_security_group" "backend_nsg" {
@@ -166,7 +174,7 @@ resource "azurerm_network_security_group" "backend_nsg" {
     source_port_range          = "*"
     destination_port_range     = "80"
     source_address_prefix      = "*"
-    destination_address_prefix = "10.0.1.0/24"
+    destination_address_prefix = "22.0.1.0/24"
   }
 }
 
@@ -182,7 +190,7 @@ resource "azurerm_subnet" "bastion_subnet" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.9.0/24"]
+  address_prefixes     = ["22.0.9.0/24"]
 }
 
 resource "azurerm_public_ip" "bastion_public_ip" {
@@ -240,277 +248,93 @@ resource "azurerm_subnet_nat_gateway_association" "gateway_subnet_association" {
 
 #==========================================================
 
-#Create nic for vm1
-resource "azurerm_network_interface" "vm1_nic1" {
-  name                = "jk-example-vm1-nic1"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-#Create nic for vm2
-resource "azurerm_network_interface" "vm2_nic1" {
-  name                = "jk-example-vm2-nic1"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-#Create vm 1
-resource "azurerm_linux_virtual_machine" "vm1" {
-  name                = "jk-example-vm1"
-  resource_group_name = azurerm_resource_group.resource_group.name
-  location            = azurerm_resource_group.resource_group.location
-  size                = "Standard_F1"
-  admin_username      = "adminusername"
-  network_interface_ids = [
-    azurerm_network_interface.vm1_nic1.id,
-    azurerm_network_interface.vm1_nic1.id
-  ]
-
-  admin_ssh_key {
-    username   = "adminusername"
-    public_key = file("keys/key_vm1.pub")
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts"
-    version   = "latest"
-  }
-
-  custom_data = base64encode(templatefile("cloud-init.yml", {
-       DOCKER_USERNAME = var.DOCKER_USERNAME,
-       DOCKER_PASSWORD = var.DOCKER_PASSWORD
-     }))
-
-  depends_on = [ azurerm_postgresql_flexible_server_database.postgres_database,
-   azurerm_network_security_group.backend_database_subnet_nsg,
-   azurerm_network_security_group.postgres_subnet_nsg ]
-}
-
-#Create vm
-resource "azurerm_linux_virtual_machine" "vm2" {
-  name                = "jk-example-vm2"
-  resource_group_name = azurerm_resource_group.resource_group.name
-  location            = azurerm_resource_group.resource_group.location
-  size                = "Standard_F1"
-  admin_username      = "adminusername"
-  network_interface_ids = [
-    azurerm_network_interface.vm2_nic1.id,
-    azurerm_network_interface.vm2_nic2.id
-  ]
-
-  admin_ssh_key {
-    username   = "adminusername"
-    public_key = file("keys/key_vm2.pub")
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts"
-    version   = "latest"
-  }
-
-  custom_data = base64encode(templatefile("cloud-init.yml", {
-       DOCKER_USERNAME = var.DOCKER_USERNAME,
-       DOCKER_PASSWORD = var.DOCKER_PASSWORD
-     }))
-
-  depends_on = [ azurerm_postgresql_flexible_server_database.postgres_database,
-   azurerm_network_security_group.backend_database_subnet_nsg,
-   azurerm_network_security_group.postgres_subnet_nsg ]
+module "vm" {
+  source = "./modules/virtual-machine"
+  load_balancer_subnet_id = azurerm_subnet.subnet.id
+  #database_subnet_id = module.db.databse_connection_subnet_id
+  docker_password = var.DOCKER_PASSWORD
+  docker_username = var.DOCKER_USERNAME
+  public_key_location = "${path.root}/keys"
+  cloud_init_location = "${path.root}/cloud-init.yml"
 }
 
 #==============================================
 
-# Define a subnet for database
-resource "azurerm_subnet" "postgres_subnet" {
-  name                 = "jk-example-postgres-subnet"
-  resource_group_name  = azurerm_resource_group.resource_group.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.4.0/24"]
-  service_endpoints    = ["Microsoft.Storage"]
-  delegation {
-    name = "fs"
-    service_delegation {
-      name = "Microsoft.DBforPostgreSQL/flexibleServers"
-      actions = [
-        "Microsoft.Network/virtualNetworks/subnets/join/action",
-      ]
-    }
-  }
+module "db" {
+  source = "./modules/database"
+  vnet = azurerm_virtual_network.vnet
+  db_connection_subnet_adress_prefixes = ["22.0.3.0/24"]
+  db_server_subnet_adress_prefixes = ["22.0.4.0/24"]
 }
 
-# Define a subnet for backend to connect with databse
-resource "azurerm_subnet" "backend_database_subnet" {
-  name                 = "jk-example-backend-database-subnet"
-  resource_group_name  = azurerm_resource_group.resource_group.name
-  virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.3.0/24"]
-}
+# # Create Network Security Group for backend connection database and rules
+# resource "azurerm_network_security_group" "backend_database_subnet_nsg" {
+#   name                = "jk-example-backend-database-nsg"
+#   location            = azurerm_resource_group.resource_group.location
+#   resource_group_name = azurerm_resource_group.resource_group.name
 
-resource "azurerm_private_dns_zone" "dns" {
-  name                = "jk.example.postgres.database.azure.com"
-  resource_group_name = azurerm_resource_group.resource_group.name
-}
+#   security_rule {
+#     name                       = "db-access-ingress"
+#     priority                   = 1008
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp" 
+#     source_port_range          = "*"
+#     destination_port_range     = "*"
+#     source_address_prefix      = "5432"
+#     destination_address_prefix = azurerm_subnet.backend_database_subnet.address_prefixes[0]
+#   }
 
-resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_link" {
-  name                  = "jkExampleVnetZone.com"
-  private_dns_zone_name = azurerm_private_dns_zone.dns.name
-  virtual_network_id    = azurerm_virtual_network.vnet.id
-  resource_group_name   = azurerm_resource_group.resource_group.name
-  depends_on            = [azurerm_subnet.postgres_subnet]
-}
+#   security_rule {
+#     name                       = "db-access-egress"
+#     priority                   = 1008
+#     direction                  = "Outbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "5432"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = azurerm_subnet.postgres_subnet.address_prefixes[0]
+#   }
+# }
 
-# Define a PostgreSQL Flexible Server
-resource "azurerm_postgresql_flexible_server" "postgres_server" {
-  name                = "jk-example-postgresql-server"
-  resource_group_name = azurerm_resource_group.resource_group.name
-  location            = azurerm_resource_group.resource_group.location
-  version             = "16"
-  zone                = "1"
+# # Create Network Security Group for postgres to reach backend and rules
+# resource "azurerm_network_security_group" "postgres_subnet_nsg" {
+#   name                = "jk-example-postgres-nsg"
+#   location            = azurerm_resource_group.resource_group.location
+#   resource_group_name = azurerm_resource_group.resource_group.name
 
-  administrator_login          = var.DATABASE_LOGIN
-  administrator_password       = var.DATABASE_PASSWORD
-  sku_name                     = "GP_Standard_D2s_v3"
-  delegated_subnet_id = azurerm_subnet.postgres_subnet.id
-  private_dns_zone_id = azurerm_private_dns_zone.dns.id
-  public_network_access_enabled = false
-
-  # prevent the possibility of accidental data loss
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# Define a PostgreSQL Flexible Server Database
-resource "azurerm_postgresql_flexible_server_database" "postgres_database" {
-  name                = var.DATABASE_NAME
-  server_id           = azurerm_postgresql_flexible_server.postgres_server.id
-
-  # prevent the possibility of accidental data loss
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
-# Create Network Security Group for backend connection database and rules
-resource "azurerm_network_security_group" "backend_database_subnet_nsg" {
-  name                = "jk-example-backend-database-nsg"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  security_rule {
-    name                       = "db-access-ingress"
-    priority                   = 1008
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp" 
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "5432"
-    destination_address_prefix = azurerm_subnet.backend_database_subnet.address_prefixes[0]
-  }
-
-  security_rule {
-    name                       = "db-access-egress"
-    priority                   = 1008
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "5432"
-    source_address_prefix      = "*"
-    destination_address_prefix = azurerm_subnet.postgres_subnet.address_prefixes[0]
-  }
-}
-
-# Create Network Security Group for postgres to reach backend and rules
-resource "azurerm_network_security_group" "postgres_subnet_nsg" {
-  name                = "jk-example-postgres-nsg"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  security_rule {
-    name                       = "db-access-egress"
-    priority                   = 1008
-    direction                  = "Outbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "*"
-    source_address_prefix      = "5432"
-    destination_address_prefix = azurerm_subnet.backend_database_subnet.address_prefixes[0]
-  }
-  security_rule  {
-    name                       = "db-access-ingress"
-    priority                   = 1008
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "5432"
-    source_address_prefix      = "*"
-    destination_address_prefix = azurerm_subnet.postgres_subnet.address_prefixes[0]
-  }
-}
+#   security_rule {
+#     name                       = "db-access-egress"
+#     priority                   = 1008
+#     direction                  = "Outbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "*"
+#     source_address_prefix      = "5432"
+#     destination_address_prefix = azurerm_subnet.backend_database_subnet.address_prefixes[0]
+#   }
+#   security_rule  {
+#     name                       = "db-access-ingress"
+#     priority                   = 1008
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "5432"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = azurerm_subnet.postgres_subnet.address_prefixes[0]
+#   }
+# }
 
 # Bind Network Security Groups with subnets 
-resource "azurerm_subnet_network_security_group_association" "backend_nsg_association" {
-  subnet_id                 = azurerm_subnet.backend_database_subnet.id
-  network_security_group_id = azurerm_network_security_group.backend_database_subnet_nsg.id
-}
+# resource "azurerm_subnet_network_security_group_association" "backend_nsg_association" {
+#   subnet_id                 = azurerm_subnet.backend_database_subnet.id
+#   network_security_group_id = azurerm_network_security_group.backend_database_subnet_nsg.id
+# }
 
-resource "azurerm_subnet_network_security_group_association" "postgres_nsg_association" {
-  subnet_id                 = azurerm_subnet.postgres_subnet.id
-  network_security_group_id = azurerm_network_security_group.postgres_subnet_nsg.id
-}
-
-#Create nic for vm1
-resource "azurerm_network_interface" "vm1_nic2" {
-  name                = "jk-example-vm1-nic2"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.backend_database_subnet.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
-
-#Create nic for vm2
-resource "azurerm_network_interface" "vm2_nic2" {
-  name                = "jk-example-vm2-nic2"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.backend_database_subnet.id
-    private_ip_address_allocation = "Dynamic"
-  }
-}
+# resource "azurerm_subnet_network_security_group_association" "postgres_nsg_association" {
+#   subnet_id                 = azurerm_subnet.postgres_subnet.id
+#   network_security_group_id = azurerm_network_security_group.postgres_subnet_nsg.id
+# }
