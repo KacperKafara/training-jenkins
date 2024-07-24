@@ -74,16 +74,24 @@ resource "azurerm_subnet" "subnet" {
   address_prefixes     = ["22.0.1.0/24"]
 }
 
+#Create frontend subnet
+resource "azurerm_subnet" "frontend_subnet" {
+  name                 = "jk-example-subnet"
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["22.0.5.0/24"]
+}
+
 #=====================================================
 
-#Create public ip for load balancer
-resource "azurerm_public_ip" "load_balancer_public_ip" {
-  name                = "jk-example-lb-public-ip"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-  allocation_method   = "Static"
-  sku = "Standard"
-}
+# #Create public ip for load balancer
+# resource "azurerm_public_ip" "load_balancer_public_ip" {
+#   name                = "jk-example-lb-public-ip"
+#   location            = azurerm_resource_group.resource_group.location
+#   resource_group_name = azurerm_resource_group.resource_group.name
+#   allocation_method   = "Static"
+#   sku = "Standard"
+# }
 
 #Create load balancer
 resource "azurerm_lb" "load_balancer" {
@@ -95,7 +103,10 @@ resource "azurerm_lb" "load_balancer" {
 
   frontend_ip_configuration {
     name                 = "jk-example-lb-frontend-ip"
-    public_ip_address_id = azurerm_public_ip.load_balancer_public_ip.id
+    subnet_id            = azurerm_subnet.frontend_subnet.id
+    private_ip_address   = "22.0.5.4"
+    private_ip_address_allocation = "Static"
+    #public_ip_address_id = azurerm_public_ip.load_balancer_public_ip.id
   }
 }
 
@@ -123,19 +134,6 @@ resource "azurerm_lb_probe" "probe" {
   port            = 80
 }
 
-# # Create Network Interface
-# resource "azurerm_network_interface" "pool_nic" {
-#   name                = "jk-backend-pool-nic"
-#   location            = azurerm_resource_group.resource_group.location
-#   resource_group_name = azurerm_resource_group.resource_group.name
-
-#   ip_configuration {
-#     name                          = "jk-example-ipconfig-pool"
-#     subnet_id                     = azurerm_subnet.subnet.id
-#     private_ip_address_allocation = "Dynamic"
-#     primary = true
-#   }
-# }
 
 # Associate Network Interface to the Backend Pool of the Load Balancer
 resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association" {
@@ -144,20 +142,6 @@ resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_n
   ip_configuration_name   = module.vm.load_balancer_nic[count.index].ip_configuration[0].name
   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
 }
-
-# # Associate Network Interface to the Backend Pool of the Load Balancer
-# resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association_vm1" {
-#   network_interface_id    = azurerm_network_interface.vm1_nic1.id
-#   ip_configuration_name   = azurerm_network_interface.vm1_nic1.ip_configuration[0].name
-#   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
-# }
-
-# Associate Network Interface to the Backend Pool of the Load Balancer
-# resource "azurerm_network_interface_backend_address_pool_association" "lb_pool_nic_association_vm2" {
-#   network_interface_id    = azurerm_network_interface.vm2_nic1.id
-#   ip_configuration_name   = azurerm_network_interface.vm2_nic1.ip_configuration[0].name
-#   backend_address_pool_id = azurerm_lb_backend_address_pool.backend_pool.id
-# }
 
 # Create Network Security Group and rules
 resource "azurerm_network_security_group" "backend_nsg" {
@@ -266,75 +250,3 @@ module "db" {
   db_connection_subnet_adress_prefixes = ["22.0.3.0/24"]
   db_server_subnet_adress_prefixes = ["22.0.4.0/24"]
 }
-
-# # Create Network Security Group for backend connection database and rules
-# resource "azurerm_network_security_group" "backend_database_subnet_nsg" {
-#   name                = "jk-example-backend-database-nsg"
-#   location            = azurerm_resource_group.resource_group.location
-#   resource_group_name = azurerm_resource_group.resource_group.name
-
-#   security_rule {
-#     name                       = "db-access-ingress"
-#     priority                   = 1008
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp" 
-#     source_port_range          = "*"
-#     destination_port_range     = "*"
-#     source_address_prefix      = "5432"
-#     destination_address_prefix = azurerm_subnet.backend_database_subnet.address_prefixes[0]
-#   }
-
-#   security_rule {
-#     name                       = "db-access-egress"
-#     priority                   = 1008
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "5432"
-#     source_address_prefix      = "*"
-#     destination_address_prefix = azurerm_subnet.postgres_subnet.address_prefixes[0]
-#   }
-# }
-
-# # Create Network Security Group for postgres to reach backend and rules
-# resource "azurerm_network_security_group" "postgres_subnet_nsg" {
-#   name                = "jk-example-postgres-nsg"
-#   location            = azurerm_resource_group.resource_group.location
-#   resource_group_name = azurerm_resource_group.resource_group.name
-
-#   security_rule {
-#     name                       = "db-access-egress"
-#     priority                   = 1008
-#     direction                  = "Outbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "*"
-#     source_address_prefix      = "5432"
-#     destination_address_prefix = azurerm_subnet.backend_database_subnet.address_prefixes[0]
-#   }
-#   security_rule  {
-#     name                       = "db-access-ingress"
-#     priority                   = 1008
-#     direction                  = "Inbound"
-#     access                     = "Allow"
-#     protocol                   = "Tcp"
-#     source_port_range          = "*"
-#     destination_port_range     = "5432"
-#     source_address_prefix      = "*"
-#     destination_address_prefix = azurerm_subnet.postgres_subnet.address_prefixes[0]
-#   }
-# }
-
-# Bind Network Security Groups with subnets 
-# resource "azurerm_subnet_network_security_group_association" "backend_nsg_association" {
-#   subnet_id                 = azurerm_subnet.backend_database_subnet.id
-#   network_security_group_id = azurerm_network_security_group.backend_database_subnet_nsg.id
-# }
-
-# resource "azurerm_subnet_network_security_group_association" "postgres_nsg_association" {
-#   subnet_id                 = azurerm_subnet.postgres_subnet.id
-#   network_security_group_id = azurerm_network_security_group.postgres_subnet_nsg.id
-# }
