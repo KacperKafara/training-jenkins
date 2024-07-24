@@ -55,6 +55,10 @@ resource "azurerm_linux_virtual_machine" "vm" {
     version   = "latest"
   }
 
+  tags = {
+    "idemia:cpe:auto:poweroffrange" = "19:00!"
+  }
+
   custom_data = base64encode(templatefile(var.cloud_init_location, {
        DOCKER_USERNAME = var.docker_username,
        DOCKER_PASSWORD = var.docker_password
