@@ -514,3 +514,36 @@ resource "azurerm_network_interface" "vm2_nic2" {
     private_ip_address_allocation = "Dynamic"
   }
 }
+
+# Create peerings between main vnet and acr hub vnet
+resource "azurerm_virtual_network_peering" "inside_vnet_to_acr_hub_vnet" {
+  name                      = "acr-hub-vnet-peer"
+  resource_group_name       = azurerm_resource_group.resource_group.name
+  virtual_network_name      = azurerm_virtual_network.vnet.name
+  remote_virtual_network_id = "/subscriptions/72e2720e-f496-43c7-ab41-8a74e03960e5/resourceGroups/rg-int-dev-westeurope-001/providers/Microsoft.Network/virtualNetworks/vnet-hub-int-dev-westeurope-001"
+
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
+}
+
+resource "azurerm_virtual_network_peering" "acr_hub_vnet_to_inside_vnet" {
+  name                      = "group-1-vnet-peer"
+  resource_group_name       = "rg-int-dev-westeurope-001"
+  virtual_network_name      = "vnet-hub-int-dev-westeurope-001"
+  remote_virtual_network_id = azurerm_virtual_network.vnet.id
+
+  allow_virtual_network_access = true
+  allow_forwarded_traffic      = true
+  allow_gateway_transit        = false
+  use_remote_gateways          = false
+}
+
+# Add link to the private dns zone of acr hub vnet
+resource "azurerm_private_dns_zone_virtual_network_link" "dns_network_link" {
+  name                  = "group1_dns_network_link"
+  resource_group_name   = "rg-int-dev-westeurope-001"
+  private_dns_zone_name = "privatelink.azurecr.io"
+  virtual_network_id    = "/subscriptions/72e2720e-f496-43c7-ab41-8a74e03960e5/resourceGroups/rg-int-dev-westeurope-001/providers/Microsoft.Network/virtualNetworks/vnet-hub-int-dev-westeurope-001"
+}
