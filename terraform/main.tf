@@ -7,14 +7,6 @@ terraform {
       version = "=3.112.0"
     }
   }
-    backend "azurerm" {
-    subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
-    resource_group_name  = "rg-int-dev-westeurope-001"
-    storage_account_name = "interntfstatestore"                   
-    container_name       = "statefilecontainer"
-    key                  = "jakubkoz/workspace/terrafrom.tfstate"
-    tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
-  }
 }
 
 # Configure the Microsoft Azure Provider
@@ -63,7 +55,7 @@ resource "azurerm_virtual_network" "vnet" {
   name                = "jk-example-vnet"
   location            = azurerm_resource_group.resource_group.location
   resource_group_name = azurerm_resource_group.resource_group.name
-  address_space       = ["10.0.0.0/16"]
+  address_space       = ["23.0.0.0/16"]
 }
 
 #Create subnet for machines to load balancer communication
@@ -71,7 +63,7 @@ resource "azurerm_subnet" "subnet" {
   name                 = "jk-example-subnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.1.0/24"]
+  address_prefixes     = ["23.0.1.0/24"]
 }
 
 #=====================================================
@@ -166,7 +158,7 @@ resource "azurerm_network_security_group" "backend_nsg" {
     source_port_range          = "*"
     destination_port_range     = "80"
     source_address_prefix      = "*"
-    destination_address_prefix = "10.0.1.0/24"
+    destination_address_prefix = "23.0.1.0/24"
   }
 }
 
@@ -182,7 +174,7 @@ resource "azurerm_subnet" "bastion_subnet" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.9.0/24"]
+  address_prefixes     = ["23.0.9.0/24"]
 }
 
 resource "azurerm_public_ip" "bastion_public_ip" {
@@ -275,7 +267,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
   admin_username      = "adminusername"
   network_interface_ids = [
     azurerm_network_interface.vm1_nic1.id,
-    azurerm_network_interface.vm1_nic1.id
+    azurerm_network_interface.vm1_nic2.id
   ]
 
   admin_ssh_key {
@@ -351,7 +343,7 @@ resource "azurerm_subnet" "postgres_subnet" {
   name                 = "jk-example-postgres-subnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.4.0/24"]
+  address_prefixes     = ["23.0.4.0/24"]
   service_endpoints    = ["Microsoft.Storage"]
   delegation {
     name = "fs"
@@ -369,7 +361,7 @@ resource "azurerm_subnet" "backend_database_subnet" {
   name                 = "jk-example-backend-database-subnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.3.0/24"]
+  address_prefixes     = ["23.0.3.0/24"]
 }
 
 resource "azurerm_private_dns_zone" "dns" {
@@ -387,7 +379,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_link" {
 
 # Define a PostgreSQL Flexible Server
 resource "azurerm_postgresql_flexible_server" "postgres_server" {
-  name                = "jk-example-postgresql-server"
+  name                = "jk-example-postgresql-server-2"
   resource_group_name = azurerm_resource_group.resource_group.name
   location            = azurerm_resource_group.resource_group.location
   version             = "16"
@@ -513,4 +505,96 @@ resource "azurerm_network_interface" "vm2_nic2" {
     subnet_id                     = azurerm_subnet.backend_database_subnet.id
     private_ip_address_allocation = "Dynamic"
   }
+}
+
+
+#Create public ip for frontend
+resource "azurerm_public_ip" "frontend_public_ip" {
+  name                = "jk-example-frontend-public-ip"
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
+  allocation_method   = "Static"
+  sku = "Standard"
+}
+
+#Create subnet for vm3 frontend
+resource "azurerm_subnet" "frontend_subnet" {
+  name                 = "frontend-subnet"
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["23.0.10.0/24"]
+}
+
+#Create nic for vm3
+resource "azurerm_network_interface" "vm3_nic1" {
+  name                = "jk-example-vm3-nic1"
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
+
+  ip_configuration {
+    name                          = "internal"
+    private_ip_address_allocation = "Dynamic"
+    subnet_id = azurerm_subnet.frontend_subnet.id
+    public_ip_address_id = azurerm_public_ip.frontend_public_ip.id
+  }
+}
+
+# Create security group for frontend
+resource "azurerm_network_security_group" "frontend_sg" {
+  name                = "frontend-sg"
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
+
+  security_rule {
+    name                       = "frontend-rule"
+    priority                   = 1008
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+}
+
+# Associate the Network Security Group to the subnet
+resource "azurerm_subnet_network_security_group_association" "my_frontend_sg_association" {
+  subnet_id                 = azurerm_subnet.frontend_subnet.id
+  network_security_group_id = azurerm_network_security_group.frontend_sg.id
+}
+
+#Create vm 3 (frontend)
+resource "azurerm_linux_virtual_machine" "vm3-frontend" {
+  name                = "jk-example-vm3-frontend"
+  resource_group_name = azurerm_resource_group.resource_group.name
+  location            = azurerm_resource_group.resource_group.location
+  size                = "Standard_F1"
+  admin_username      = "adminusername"
+  
+  network_interface_ids = [
+    azurerm_network_interface.vm3_nic1.id,
+  ]
+
+  admin_ssh_key {
+    username   = "adminusername"
+    public_key = file("keys/key_vm3.pub")
+  }
+
+  os_disk {
+    caching              = "ReadWrite"
+    storage_account_type = "Standard_LRS"
+  }
+
+  source_image_reference {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts"
+    version   = "latest"
+  }
+
+  custom_data = base64encode(templatefile("cloud-init2.yml", {
+       DOCKER_USERNAME = var.DOCKER_USERNAME,
+       DOCKER_PASSWORD = var.DOCKER_PASSWORD
+     }))
 }
