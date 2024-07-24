@@ -12,16 +12,16 @@ resource "azurerm_subnet" "postgres_subnet" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = var.vnet.name
   address_prefixes     = var.db_server_subnet_adress_prefixes
-  service_endpoints    = ["Microsoft.Storage"]
-  delegation {
-    name = "fs"
-    service_delegation {
-      name = "Microsoft.DBforPostgreSQL/flexibleServers"
-      actions = [
-        "Microsoft.Network/virtualNetworks/subnets/join/action",
-      ]
-    }
-  }
+  # service_endpoints    = ["Microsoft.Storage"]
+  # delegation {
+  #   name = "fs"
+  #   service_delegation {
+  #     name = "Microsoft.DBforPostgreSQL/flexibleServers"
+  #     actions = [
+  #       "Microsoft.Network/virtualNetworks/subnets/join/action",
+  #     ]
+  #   }
+  # }
 }
 
 # # Define a subnet for backend to connect with databse
@@ -42,7 +42,6 @@ resource "azurerm_private_dns_zone_virtual_network_link" "dns_vnet_link" {
   private_dns_zone_name = azurerm_private_dns_zone.dns.name
   virtual_network_id    = var.vnet.id
   resource_group_name   = var.resource_group_name
-  depends_on            = [azurerm_subnet.postgres_subnet]
 }
 
 # Define a PostgreSQL Flexible Server
@@ -56,7 +55,7 @@ resource "azurerm_postgresql_flexible_server" "postgres_server" {
   administrator_login          = var.database_login
   administrator_password       = var.database_password
   sku_name                     = "GP_Standard_D2s_v3"
-  delegated_subnet_id = azurerm_subnet.postgres_subnet.id
+  #delegated_subnet_id = azurerm_subnet.postgres_subnet.id
   private_dns_zone_id = azurerm_private_dns_zone.dns.id
   public_network_access_enabled = false
 
@@ -75,6 +74,26 @@ resource "azurerm_postgresql_flexible_server_database" "postgres_database" {
 #   lifecycle {
 #     prevent_destroy = true
 #   }
+}
+
+# Create private endpoint for SQL server
+resource "azurerm_private_endpoint" "database_private_endpoint" {
+  name                = "${var.resource_group_name}_endpoint_sql"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  subnet_id           = azurerm_subnet.postgres_subnet.id
+
+  private_service_connection {
+    name                           = "${var.resource_group_name}_private_serviceconnection"
+    private_connection_resource_id = azurerm_postgresql_flexible_server.postgres_server.id
+    subresource_names              = ["postgresqlServer"]
+    is_manual_connection           = false
+  }
+
+  private_dns_zone_group {
+    name                 = "dns-zone-group"
+    private_dns_zone_ids = [azurerm_private_dns_zone.dns.id]
+  }
 }
 
 # # Create Network Security Group for backend connection database and rules
