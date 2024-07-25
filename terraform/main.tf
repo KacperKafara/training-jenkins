@@ -76,7 +76,7 @@ resource "azurerm_subnet" "subnet" {
 
 #Create frontend subnet
 resource "azurerm_subnet" "frontend_subnet" {
-  name                 = "jk-example-subnet"
+  name                 = "jk-example-frontend-subnet"
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["22.0.5.0/24"]
@@ -105,7 +105,7 @@ resource "azurerm_lb_rule" "lb_rule" {
   name                           = "jk-example-lb-rule"
   protocol                       = "Tcp"
   frontend_port                  = 80
-  backend_port                   = 8080
+  backend_port                   = 80
   frontend_ip_configuration_name = azurerm_lb.load_balancer.frontend_ip_configuration[0].name
   backend_address_pool_ids = [azurerm_lb_backend_address_pool.backend_pool.id]
   probe_id = azurerm_lb_probe.probe.id
@@ -226,6 +226,7 @@ resource "azurerm_public_ip" "frontend_public_ip" {
   location            = azurerm_resource_group.resource_group.location
   resource_group_name = azurerm_resource_group.resource_group.name
   allocation_method   = "Static"
+  domain_name_label   = "group1-parkanizer"
   sku = "Standard"
 }
 
@@ -250,13 +251,25 @@ resource "azurerm_network_security_group" "frontend_sg" {
   resource_group_name = azurerm_resource_group.resource_group.name
 
   security_rule {
-    name                       = "frontend-rule"
+    name                       = "frontend-HTTP-rule"
     priority                   = 1008
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "80"
+    source_address_prefix      = "*"
+    destination_address_prefix = "*"
+  }
+
+  security_rule {
+    name                       = "frontend-HTTPS-rule"
+    priority                   = 1018
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "443"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
@@ -282,7 +295,7 @@ resource "azurerm_linux_virtual_machine" "vm3-frontend" {
 
   admin_ssh_key {
     username   = "adminusername"
-    public_key = file("keys/key_vm3.pub")
+    public_key = file("keys/key_vm2.pub")
   }
 
   os_disk {
@@ -348,7 +361,7 @@ resource "azurerm_private_dns_zone_virtual_network_link" "dns_network_link" {
   name                  = "group1_dns_network_link"
   resource_group_name   = "rg-int-dev-westeurope-001"
   private_dns_zone_name = "privatelink.azurecr.io"
-  virtual_network_id    = "/subscriptions/72e2720e-f496-43c7-ab41-8a74e03960e5/resourceGroups/rg-int-dev-westeurope-001/providers/Microsoft.Network/virtualNetworks/vnet-hub-int-dev-westeurope-001"
+  virtual_network_id    = azurerm_virtual_network.vnet.id
 }
 
 module "db" {
@@ -356,4 +369,5 @@ module "db" {
   vnet = azurerm_virtual_network.vnet
   db_connection_subnet_adress_prefixes = ["22.0.3.0/24"]
   db_server_subnet_adress_prefixes = ["22.0.4.0/24"]
+  depends_on = [ azurerm_resource_group.resource_group ]
 }

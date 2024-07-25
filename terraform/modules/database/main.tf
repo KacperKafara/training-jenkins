@@ -34,9 +34,9 @@ resource "azurerm_postgresql_flexible_server" "postgres_server" {
   public_network_access_enabled = false
 
   # prevent the possibility of accidental data loss
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 # Define a PostgreSQL Flexible Server Database
@@ -45,9 +45,9 @@ resource "azurerm_postgresql_flexible_server_database" "postgres_database" {
   server_id           = azurerm_postgresql_flexible_server.postgres_server.id
 
   #prevent the possibility of accidental data loss
-  lifecycle {
-    prevent_destroy = true
-  }
+  # lifecycle {
+  #   prevent_destroy = true
+  # }
 }
 
 # Create private endpoint for SQL server
