@@ -220,100 +220,136 @@ resource "azurerm_subnet_nat_gateway_association" "gateway_subnet_association" {
   nat_gateway_id = azurerm_nat_gateway.gateway.id
 }
 
-#Create public ip for frontend
-resource "azurerm_public_ip" "frontend_public_ip" {
-  name                = "jk-example-frontend-public-ip"
+# #Create public ip for frontend
+# resource "azurerm_public_ip" "frontend_public_ip" {
+#   name                = "jk-example-frontend-public-ip"
+#   location            = azurerm_resource_group.resource_group.location
+#   resource_group_name = azurerm_resource_group.resource_group.name
+#   allocation_method   = "Static"
+#   domain_name_label   = "group1-parkanizer"
+#   sku = "Standard"
+# }
+
+# #Create nic for vm3
+# resource "azurerm_network_interface" "vm3_nic1" {
+#   name                = "jk-example-vm3-nic1"
+#   location            = azurerm_resource_group.resource_group.location
+#   resource_group_name = azurerm_resource_group.resource_group.name
+
+#   ip_configuration {
+#     name                          = "internal"
+#     private_ip_address_allocation = "Dynamic"
+#     subnet_id = azurerm_subnet.frontend_subnet.id
+#     public_ip_address_id = azurerm_public_ip.frontend_public_ip.id
+#   }
+# }
+
+# # Create security group for frontend
+# resource "azurerm_network_security_group" "frontend_sg" {
+#   name                = "frontend-sg"
+#   location            = azurerm_resource_group.resource_group.location
+#   resource_group_name = azurerm_resource_group.resource_group.name
+
+#   security_rule {
+#     name                       = "frontend-HTTP-rule"
+#     priority                   = 1008
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "80"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+
+#   security_rule {
+#     name                       = "frontend-HTTPS-rule"
+#     priority                   = 1018
+#     direction                  = "Inbound"
+#     access                     = "Allow"
+#     protocol                   = "Tcp"
+#     source_port_range          = "*"
+#     destination_port_range     = "443"
+#     source_address_prefix      = "*"
+#     destination_address_prefix = "*"
+#   }
+# }
+
+# # Associate the Network Security Group to the subnet
+# resource "azurerm_subnet_network_security_group_association" "my_frontend_sg_association" {
+#   subnet_id                 = azurerm_subnet.frontend_subnet.id
+#   network_security_group_id = azurerm_network_security_group.frontend_sg.id
+# }
+
+# #Create vm 3 (frontend)
+# resource "azurerm_linux_virtual_machine" "vm3-frontend" {
+#   name                = "jk-example-vm3-frontend"
+#   resource_group_name = azurerm_resource_group.resource_group.name
+#   location            = azurerm_resource_group.resource_group.location
+#   size                = "Standard_F1"
+#   admin_username      = "adminusername"
+
+#   network_interface_ids = [
+#     azurerm_network_interface.vm3_nic1.id,
+#   ]
+
+#   admin_ssh_key {
+#     username   = "adminusername"
+#     public_key = file("keys/key_vm2.pub")
+#   }
+
+#   os_disk {
+#     caching              = "ReadWrite"
+#     storage_account_type = "Standard_LRS"
+#   }
+
+#   source_image_reference {
+#     publisher = "Canonical"
+#     offer     = "0001-com-ubuntu-server-jammy"
+#     sku       = "22_04-lts"
+#     version   = "latest"
+#   }
+
+#   custom_data = base64encode(templatefile("cloud-init2.yml", {
+#        DOCKER_USERNAME = var.DOCKER_USERNAME,
+#        DOCKER_PASSWORD = var.DOCKER_PASSWORD
+#      }))
+# }
+
+resource "azurerm_log_analytics_workspace" "app-container-ws" {
+  name                = "app-ws-01"
   location            = azurerm_resource_group.resource_group.location
   resource_group_name = azurerm_resource_group.resource_group.name
-  allocation_method   = "Static"
-  domain_name_label   = "group1-parkanizer"
-  sku = "Standard"
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
 }
 
-#Create nic for vm3
-resource "azurerm_network_interface" "vm3_nic1" {
-  name                = "jk-example-vm3-nic1"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
-
-  ip_configuration {
-    name                          = "internal"
-    private_ip_address_allocation = "Dynamic"
-    subnet_id = azurerm_subnet.frontend_subnet.id
-    public_ip_address_id = azurerm_public_ip.frontend_public_ip.id
-  }
+resource "azurerm_container_app_environment" "app-env" {
+  name                       = "g1-app-env"
+  location                   = azurerm_resource_group.resource_group.location
+  resource_group_name        = azurerm_resource_group.resource_group.name
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.app-container-ws.id
+  # infrastructure_subnet_id   = azurerm_subnet.frontend_subnet
 }
 
-# Create security group for frontend
-resource "azurerm_network_security_group" "frontend_sg" {
-  name                = "frontend-sg"
-  location            = azurerm_resource_group.resource_group.location
-  resource_group_name = azurerm_resource_group.resource_group.name
+resource "azurerm_container_app" "app-container" {
+  name                         = "g1-app-container"
+  container_app_environment_id = azurerm_container_app_environment.app-env.id
+  resource_group_name          = azurerm_resource_group.resource_group.name
+  revision_mode                = "Single"
 
-  security_rule {
-    name                       = "frontend-HTTP-rule"
-    priority                   = 1008
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "80"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+  registry {
   }
 
-  security_rule {
-    name                       = "frontend-HTTPS-rule"
-    priority                   = 1018
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "443"
-    source_address_prefix      = "*"
-    destination_address_prefix = "*"
+  template {
+    container {
+      name   = "examplecontainerapp"
+      image  = "grupa1/parkanizer-frontend:latest"
+      cpu    = 0.25
+      memory = "0.5Gi"
+    }
+
   }
-}
-
-# Associate the Network Security Group to the subnet
-resource "azurerm_subnet_network_security_group_association" "my_frontend_sg_association" {
-  subnet_id                 = azurerm_subnet.frontend_subnet.id
-  network_security_group_id = azurerm_network_security_group.frontend_sg.id
-}
-
-#Create vm 3 (frontend)
-resource "azurerm_linux_virtual_machine" "vm3-frontend" {
-  name                = "jk-example-vm3-frontend"
-  resource_group_name = azurerm_resource_group.resource_group.name
-  location            = azurerm_resource_group.resource_group.location
-  size                = "Standard_F1"
-  admin_username      = "adminusername"
-
-  network_interface_ids = [
-    azurerm_network_interface.vm3_nic1.id,
-  ]
-
-  admin_ssh_key {
-    username   = "adminusername"
-    public_key = file("keys/key_vm2.pub")
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts"
-    version   = "latest"
-  }
-
-  custom_data = base64encode(templatefile("cloud-init2.yml", {
-       DOCKER_USERNAME = var.DOCKER_USERNAME,
-       DOCKER_PASSWORD = var.DOCKER_PASSWORD
-     }))
 }
 
 #==========================================================
