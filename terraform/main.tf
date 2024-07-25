@@ -330,13 +330,22 @@ module "vm" {
 
 #==============================================
 
+data "azurerm_resource_group" "hub_resource_group" {
+  name = "rg-int-dev-westeurope-001"
+}
+
+data "azurerm_virtual_network" "hub_vnet" {
+  name = "vnet-hub-int-dev-westeurope-001"
+  resource_group_name = data.azurerm_resource_group.hub_resource_group.name
+}
+
 
 # Create peerings between main vnet and acr hub vnet
 resource "azurerm_virtual_network_peering" "inside_vnet_to_acr_hub_vnet" {
   name                      = "acr-hub-vnet-peer"
   resource_group_name       = azurerm_resource_group.resource_group.name
   virtual_network_name      = azurerm_virtual_network.vnet.name
-  remote_virtual_network_id = "/subscriptions/72e2720e-f496-43c7-ab41-8a74e03960e5/resourceGroups/rg-int-dev-westeurope-001/providers/Microsoft.Network/virtualNetworks/vnet-hub-int-dev-westeurope-001"
+  remote_virtual_network_id = data.azurerm_virtual_network.hub_vnet.id
 
   allow_virtual_network_access = true
   allow_forwarded_traffic      = true
@@ -346,8 +355,8 @@ resource "azurerm_virtual_network_peering" "inside_vnet_to_acr_hub_vnet" {
 
 resource "azurerm_virtual_network_peering" "acr_hub_vnet_to_inside_vnet" {
   name                      = "group-1-vnet-peer"
-  resource_group_name       = "rg-int-dev-westeurope-001"
-  virtual_network_name      = "vnet-hub-int-dev-westeurope-001"
+  resource_group_name       = data.azurerm_resource_group.hub_resource_group.name
+  virtual_network_name      = data.azurerm_virtual_network.hub_vnet.name
   remote_virtual_network_id = azurerm_virtual_network.vnet.id
 
   allow_virtual_network_access = true
@@ -357,10 +366,15 @@ resource "azurerm_virtual_network_peering" "acr_hub_vnet_to_inside_vnet" {
 }
 
 # Add link to the private dns zone of acr hub vnet
+data "azurerm_private_dns_zone" "private_dns_zone" {
+  name                = "privatelink.azurecr.io"
+  resource_group_name = data.azurerm_resource_group.hub_resource_group.name
+}
+
 resource "azurerm_private_dns_zone_virtual_network_link" "dns_network_link" {
   name                  = "group1_dns_network_link"
-  resource_group_name   = "rg-int-dev-westeurope-001"
-  private_dns_zone_name = "privatelink.azurecr.io"
+  resource_group_name   = data.azurerm_resource_group.hub_resource_group.name
+  private_dns_zone_name = data.azurerm_private_dns_zone.private_dns_zone.name
   virtual_network_id    = azurerm_virtual_network.vnet.id
 }
 
