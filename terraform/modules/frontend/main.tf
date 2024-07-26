@@ -61,7 +61,7 @@ resource "azurerm_subnet_network_security_group_association" "my_frontend_sg_ass
 
 #Create vm 3 (frontend)
 resource "azurerm_linux_virtual_machine" "frontend_vm" {
-  name                = "${var.resource_group_name}_vm_frontend"
+  name                = "${var.resource_group_name}-vm-frontend"
   resource_group_name = var.resource_group_name
   location            = var.location
   size                = "Standard_F1"

@@ -22,36 +22,6 @@ provider "azurerm" {
   features {}
 }
 
-variable "DOCKER_USERNAME" {
-  description = "acr username"
-  type = string
-  default = "username"
-}
-
-variable "DOCKER_PASSWORD" {
-  description = "acr password"
-  type = string
-  default = "password"
-}
-
-variable "DATABASE_LOGIN" {
-  description = "postgres admin login"
-  type = string
-  default = "username"
-}
-
-variable "DATABASE_PASSWORD" {
-  description = "postgres admin password"
-  type = string
-  default = "password"
-}
-
-variable "DATABASE_NAME" {
-  description = "postgres database name"
-  type = string
-  default = "parkingDb"
-}
-
 # Create a resource group
 resource "azurerm_resource_group" "resource_group" {
   name     = "group1"
@@ -109,6 +79,43 @@ module "db" {
   db_connection_subnet_adress_prefixes = ["22.0.3.0/24"]
   db_server_subnet_adress_prefixes = ["22.0.4.0/24"]
   depends_on = [ azurerm_resource_group.resource_group ]
+}
+
+#Create subnet for machines to load balancer communication
+resource "azurerm_subnet" "monitoring_subnet" {
+  name                 = "group1-monitoring-subnet"
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["22.0.10.0/24"]
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  monitoring_subnet_id = azurerm_subnet.monitoring_subnet.id
+  docker_password = var.DOCKER_PASSWORD
+  docker_username = var.DOCKER_USERNAME
+  grafana_username = var.GRAFANA_USERNAME
+  grafana_password = var.GRAFANA_PASSWORD
+  storage_account_name = azurerm_storage_account.storage_account.name
+  storage_account_key = azurerm_storage_account.storage_account.primary_access_key
+  container_name = azurerm_storage_container.storage_container.name
+  public_key_location = "${path.root}/keys"
+  cloud_init_location = "${path.root}/cloud-init-monitoring.yml"
+}
+
+# Create storage account wiht blob container for loki logs storage
+resource "azurerm_storage_account" "storage_account" {
+  name                     = "storageaccount" 
+  resource_group_name      = azurerm_resource_group.resource_group.name
+  location                 = azurerm_resource_group.resource_group.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "storage_container" {
+  name                  = "log-container"
+  storage_account_name  = azurerm_storage_account.storage_account.name
+  container_access_type = "private"
 }
 
 #=====================================================
