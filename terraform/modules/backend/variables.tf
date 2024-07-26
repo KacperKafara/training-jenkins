@@ -42,7 +42,7 @@ variable "frontend_subnet" {
 variable "frontend_ip" {
   type = string
   description = "Ip by which the load balancer will be accessed"
-  default = "22.0.1.4"
+  default = "22.0.5.100"
 }
 
 variable "backend_subnet_prefixes" {

@@ -46,13 +46,14 @@ module "vm" {
   docker_password = var.docker_password
   docker_username = var.docker_username
   public_key_location = "${path.root}/keys"
-  cloud_init_location = "${path.root}/cloud-init.yml"
+  cloud_init_location = "${path.module}/cloud-init.yml"
+  depends_on = [ module.nat ]
 }
 
 module "lb" {
   source = "./modules/load-balancer"
   backend_subnet_id  = azurerm_subnet.backend_subnet.id
-  frontend_subnet_id    = var.frontend_subnet.id
+  frontend_subnet_id = var.frontend_subnet.id
   frontend_ip        = var.frontend_ip
 }
 

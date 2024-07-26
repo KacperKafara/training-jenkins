@@ -82,6 +82,7 @@ module "backend" {
   frontend_subnet = azurerm_subnet.frontend_subnet
   docker_username = var.DOCKER_USERNAME
   docker_password = var.DOCKER_PASSWORD
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 #========================================================
@@ -89,6 +90,7 @@ module "backend" {
 module "bastion" {
   source = "./modules/bastion"
   vnet_name = azurerm_virtual_network.vnet.name
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 #====================================================
@@ -97,8 +99,9 @@ module "frontend" {
   source = "./modules/frontend"
   vnet_name = azurerm_virtual_network.vnet.name
   docker_password = var.DOCKER_PASSWORD
-  docker_username = var.DOCKER_PASSWORD
+  docker_username = var.DOCKER_USERNAME
   fronend_subnet_id = azurerm_subnet.frontend_subnet.id
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 #=====================================================
@@ -115,6 +118,6 @@ module "db" {
 
 module "acr_peer" {
   source = "./modules/acr-connection"
-  vnet_id = azurerm_virtual_network.vnet.id
+  vnet = azurerm_virtual_network.vnet
   depends_on = [ azurerm_resource_group.resource_group ]
 }
