@@ -61,6 +61,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   custom_data = base64encode(templatefile(var.cloud_init_location, {
        DOCKER_USERNAME = var.docker_username,
-       DOCKER_PASSWORD = var.docker_password
+       DOCKER_PASSWORD = var.docker_password,
+       PROMTAIL_CONFIG = file("${path.module}/promtail-config.yml")
      }))
 }

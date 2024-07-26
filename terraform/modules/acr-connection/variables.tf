@@ -10,7 +10,10 @@ variable "location" {
   default = "Poland Central"
 }
 
-variable "vnet_id" {
-  type = string
-  description = "Id of the virtual network where the backend will be placed"
+variable "vnet" {
+  type = object({
+    name = string
+    id = string
+  })
+  description = "virtual network where the backend will be placed"
 }

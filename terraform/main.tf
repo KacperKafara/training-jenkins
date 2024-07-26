@@ -147,6 +147,7 @@ module "backend" {
   frontend_subnet = azurerm_subnet.frontend_subnet
   docker_username = var.DOCKER_USERNAME
   docker_password = var.DOCKER_PASSWORD
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 #========================================================
@@ -154,6 +155,7 @@ module "backend" {
 module "bastion" {
   source = "./modules/bastion"
   vnet_name = azurerm_virtual_network.vnet.name
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 #====================================================
@@ -162,8 +164,9 @@ module "frontend" {
   source = "./modules/frontend"
   vnet_name = azurerm_virtual_network.vnet.name
   docker_password = var.DOCKER_PASSWORD
-  docker_username = var.DOCKER_PASSWORD
+  docker_username = var.DOCKER_USERNAME
   fronend_subnet_id = azurerm_subnet.frontend_subnet.id
+  depends_on = [ azurerm_resource_group.resource_group ]
 }
 
 #=====================================================
@@ -176,10 +179,47 @@ module "db" {
   depends_on = [ azurerm_resource_group.resource_group ]
 }
 
+#Create subnet for machines to load balancer communication
+resource "azurerm_subnet" "monitoring_subnet" {
+  name                 = "group1-monitoring-subnet"
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["22.0.10.0/24"]
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  monitoring_subnet_id = azurerm_subnet.monitoring_subnet.id
+  docker_password = var.DOCKER_PASSWORD
+  docker_username = var.DOCKER_USERNAME
+  grafana_username = var.GRAFANA_USERNAME
+  grafana_password = var.GRAFANA_PASSWORD
+  storage_account_name = azurerm_storage_account.storage_account.name
+  storage_account_key = azurerm_storage_account.storage_account.primary_access_key
+  container_name = azurerm_storage_container.storage_container.name
+  public_key_location = "${path.root}/keys"
+  cloud_init_location = "${path.root}/cloud-init-monitoring.yml"
+}
+
+# Create storage account wiht blob container for loki logs storage
+resource "azurerm_storage_account" "storage_account" {
+  name                     = "storageaccount"
+  resource_group_name      = azurerm_resource_group.resource_group.name
+  location                 = azurerm_resource_group.resource_group.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "storage_container" {
+  name                  = "log-container"
+  storage_account_name  = azurerm_storage_account.storage_account.name
+  container_access_type = "private"
+}
+
 #=====================================================
 
 module "acr_peer" {
   source = "./modules/acr-connection"
-  vnet_id = azurerm_virtual_network.vnet.id
+  vnet = azurerm_virtual_network.vnet
   depends_on = [ azurerm_resource_group.resource_group ]
 }
