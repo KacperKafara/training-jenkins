@@ -28,12 +28,6 @@ variable "database_name" {
   default = "parkingDb"
 }
 
-# variable "vnet_adress_space"{
-#     type = tuple([ string ])
-#     description = "Prefixes for the database subnet"
-#     #default = ["22.0.3.0/24"]
-# }
-
 variable "vnet"{
     type = object({
       name =  string
