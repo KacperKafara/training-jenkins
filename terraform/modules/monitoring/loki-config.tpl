@@ -1,0 +1,53 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+
+ingester:
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+  chunk_idle_period: 5m
+  chunk_block_size: 262144
+  max_transfer_retries: 0
+  max_chunk_age: 1m
+
+schema_config:
+  configs:
+  - from: 2022-06-01
+    store: boltdb-shipper
+    object_store: azure
+    schema: v11
+    index:
+      prefix: index_
+      period: 24h
+
+storage_config:
+  azure:
+    account_name: ${storage_account_name}
+    account_key: ${storage_account_key}
+    container_name: ${container_name}
+  boltdb_shipper:
+    active_index_directory: /tmp/loki/index
+    cache_location: /tmp/loki/cache
+    shared_store: filesystem
+  filesystem:
+    directory: /tmp/loki/chunks
+
+limits_config:
+  enforce_metric_name: false
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+
+chunk_store_config:
+  max_look_back_period: 0s
+
+table_manager:
+  retention_deletes_enabled: false
+  retention_period: 0s
+
+common:
+  path_prefix: /tmp/loki

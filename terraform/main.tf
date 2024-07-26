@@ -22,36 +22,6 @@ provider "azurerm" {
   features {}
 }
 
-variable "DOCKER_USERNAME" {
-  description = "acr username"
-  type = string
-  default = "username"
-}
-
-variable "DOCKER_PASSWORD" {
-  description = "acr password"
-  type = string
-  default = "password"
-}
-
-variable "DATABASE_LOGIN" {
-  description = "postgres admin login"
-  type = string
-  default = "username"
-}
-
-variable "DATABASE_PASSWORD" {
-  description = "postgres admin password"
-  type = string
-  default = "password"
-}
-
-variable "DATABASE_NAME" {
-  description = "postgres database name"
-  type = string
-  default = "parkingDb"
-}
-
 # Create a resource group
 resource "azurerm_resource_group" "resource_group" {
   name     = "group1"
@@ -339,6 +309,9 @@ resource "azurerm_container_app" "app-container" {
   revision_mode                = "Single"
 
   registry {
+    server = "parkanizeracr2024.azurecr.io"
+    username = "${var.DOCKER_USERNAME}"
+    password_secret_name = "xdd"
   }
 
   template {
@@ -366,16 +339,6 @@ module "vm" {
 
 #==============================================
 
-data "azurerm_resource_group" "hub_resource_group" {
-  name = "rg-int-dev-westeurope-001"
-}
-
-data "azurerm_virtual_network" "hub_vnet" {
-  name = "vnet-hub-int-dev-westeurope-001"
-  resource_group_name = data.azurerm_resource_group.hub_resource_group.name
-}
-
-
 # Create peerings between main vnet and acr hub vnet
 resource "azurerm_virtual_network_peering" "inside_vnet_to_acr_hub_vnet" {
   name                      = "acr-hub-vnet-peer"
@@ -402,10 +365,6 @@ resource "azurerm_virtual_network_peering" "acr_hub_vnet_to_inside_vnet" {
 }
 
 # Add link to the private dns zone of acr hub vnet
-data "azurerm_private_dns_zone" "private_dns_zone" {
-  name                = "privatelink.azurecr.io"
-  resource_group_name = data.azurerm_resource_group.hub_resource_group.name
-}
 
 resource "azurerm_private_dns_zone_virtual_network_link" "dns_network_link" {
   name                  = "group1_dns_network_link"
@@ -420,4 +379,41 @@ module "db" {
   db_connection_subnet_adress_prefixes = ["22.0.3.0/24"]
   db_server_subnet_adress_prefixes = ["22.0.4.0/24"]
   depends_on = [ azurerm_resource_group.resource_group ]
+}
+
+#Create subnet for machines to load balancer communication
+resource "azurerm_subnet" "monitoring_subnet" {
+  name                 = "group1-monitoring-subnet"
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["22.0.10.0/24"]
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  monitoring_subnet_id = azurerm_subnet.monitoring_subnet.id
+  docker_password = var.DOCKER_PASSWORD
+  docker_username = var.DOCKER_USERNAME
+  grafana_username = var.GRAFANA_USERNAME
+  grafana_password = var.GRAFANA_PASSWORD
+  storage_account_name = data.azurerm_storage_account.storage_account.name
+  storage_account_key = data.azurerm_storage_account.storage_account.primary_access_key
+  container_name = azurerm_storage_container.storage_container.name
+  public_key_location = "${path.root}/keys"
+  cloud_init_location = "${path.root}/cloud-init-monitoring.yml"
+}
+
+# Create storage account wiht blob container for loki logs storage
+resource "azurerm_storage_account" "storage_account" {
+  name                     = "storageaccount" 
+  resource_group_name      = azurerm_resource_group.resource_group.name
+  location                 = azurerm_resource_group.resource_group.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "storage_container" {
+  name                  = "log-container"
+  storage_account_name  = azurerm_storage_account.storage_account.name
+  container_access_type = "private"
 }

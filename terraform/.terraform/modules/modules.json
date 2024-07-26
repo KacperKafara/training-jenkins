@@ -1,1 +1,1 @@
-{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"db","Source":"./modules/database","Dir":"modules/database"},{"Key":"vm","Source":"./modules/virtual-machine","Dir":"modules/virtual-machine"}]}
+{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"db","Source":"./modules/database","Dir":"modules/database"},{"Key":"monitoring","Source":"./modules/monitoring","Dir":"modules/monitoring"},{"Key":"vm","Source":"./modules/virtual-machine","Dir":"modules/virtual-machine"}]}
