@@ -52,6 +52,12 @@ variable "DATABASE_NAME" {
   default = "parkingDb"
 }
 
+variable "KEY_VAULT_RG" {
+  description = "keyvault resource group"
+  type = string
+  default = "group1-keyvault"
+}
+
 # Create a resource group
 resource "azurerm_resource_group" "resource_group" {
   name     = "group1"
@@ -72,6 +78,65 @@ resource "azurerm_subnet" "frontend_subnet" {
   resource_group_name  = azurerm_resource_group.resource_group.name
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["22.0.5.0/24"]
+}
+
+#=====================================================
+
+data "azurerm_key_vault" "keyvault" {
+  name                = "parkanizer-keyvault"
+  resource_group_name = var.KEY_VAULT_RG
+}
+
+
+
+data "azurerm_key_vault_secret" "database-login" {
+  name         = "database-login"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+output "database-login" {
+  value     = data.azurerm_key_vault_secret.database-login.value
+  sensitive = true
+}
+
+data "azurerm_key_vault_secret" "database-name" {
+  name         = "database-name"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+output "database-name" {
+  value     = data.azurerm_key_vault_secret.database-name.value
+  sensitive = true
+}
+
+data "azurerm_key_vault_secret" "database-password" {
+  name         = "database-password"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+output "database-password" {
+  value     = data.azurerm_key_vault_secret.database-password.value
+  sensitive = true
+}
+
+data "azurerm_key_vault_secret" "docker-password" {
+  name         = "docker-password"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+output "docker-password" {
+  value     = data.azurerm_key_vault_secret.docker-password.value
+  sensitive = true
+}
+
+data "azurerm_key_vault_secret" "docker-username" {
+  name         = "docker-username"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+output "docker-username" {
+  value     = data.azurerm_key_vault_secret.docker-username.value
+  sensitive = true
 }
 
 #=====================================================
