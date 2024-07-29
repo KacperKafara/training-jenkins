@@ -17,5 +17,5 @@ packages:
 runcmd:
   - docker login parkanizeracr2024.azurecr.io -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
   - docker pull parkanizeracr2024.azurecr.io/grupa1/parkanizer-frontend:latest
-  - docker run -d -p 80:80 -p 443:443 parkanizeracr2024.azurecr.io/grupa1/parkanizer-frontend:latest  
+  - docker run --name=frontend -d -p 80:80 -p 443:443 parkanizeracr2024.azurecr.io/grupa1/parkanizer-frontend:latest  
 final_message: "The System is finally up, after $UPTIME seconds"
