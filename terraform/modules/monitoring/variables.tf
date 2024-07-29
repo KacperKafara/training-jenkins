@@ -34,7 +34,6 @@ variable "docker_username" {
 variable "vm_username" {
   type = string
   description = "Username of the user on the vm"
-  default = "adminuser"
 }
 
 variable "grafana_username" {

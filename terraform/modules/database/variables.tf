@@ -13,19 +13,16 @@ variable "location" {
 variable "database_login" {
   description = "Login of the admin account to the database"
   type = string
-  default = "username"
 }
 
 variable "database_password" {
   description = "Password of the admin account to the database"
   type = string
-  default = "password"
 }
 
 variable "database_name" {
   description = "Name of the database"
   type = string
-  default = "parkingDb"
 }
 
 variable "vnet"{

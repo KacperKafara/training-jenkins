@@ -22,36 +22,6 @@ provider "azurerm" {
   features {}
 }
 
-variable "DOCKER_USERNAME" {
-  description = "acr username"
-  type = string
-  default = "username"
-}
-
-variable "DOCKER_PASSWORD" {
-  description = "acr password"
-  type = string
-  default = "password"
-}
-
-variable "DATABASE_LOGIN" {
-  description = "postgres admin login"
-  type = string
-  default = "username"
-}
-
-variable "DATABASE_PASSWORD" {
-  description = "postgres admin password"
-  type = string
-  default = "password"
-}
-
-variable "DATABASE_NAME" {
-  description = "postgres database name"
-  type = string
-  default = "parkingDb"
-}
-
 variable "KEY_VAULT_RG" {
   description = "keyvault resource group"
   type = string
@@ -83,10 +53,9 @@ resource "azurerm_subnet" "frontend_subnet" {
 #=====================================================
 
 data "azurerm_key_vault" "keyvault" {
-  name                = "parkanizer-keyvault"
+  name                = "parkanizer-key-vault"
   resource_group_name = var.KEY_VAULT_RG
 }
-
 
 
 data "azurerm_key_vault_secret" "database-login" {
@@ -94,19 +63,9 @@ data "azurerm_key_vault_secret" "database-login" {
   key_vault_id = data.azurerm_key_vault.keyvault.id
 }
 
-output "database-login" {
-  value     = data.azurerm_key_vault_secret.database-login.value
-  sensitive = true
-}
-
 data "azurerm_key_vault_secret" "database-name" {
   name         = "database-name"
   key_vault_id = data.azurerm_key_vault.keyvault.id
-}
-
-output "database-name" {
-  value     = data.azurerm_key_vault_secret.database-name.value
-  sensitive = true
 }
 
 data "azurerm_key_vault_secret" "database-password" {
@@ -114,19 +73,9 @@ data "azurerm_key_vault_secret" "database-password" {
   key_vault_id = data.azurerm_key_vault.keyvault.id
 }
 
-output "database-password" {
-  value     = data.azurerm_key_vault_secret.database-password.value
-  sensitive = true
-}
-
 data "azurerm_key_vault_secret" "docker-password" {
   name         = "docker-password"
   key_vault_id = data.azurerm_key_vault.keyvault.id
-}
-
-output "docker-password" {
-  value     = data.azurerm_key_vault_secret.docker-password.value
-  sensitive = true
 }
 
 data "azurerm_key_vault_secret" "docker-username" {
@@ -134,9 +83,19 @@ data "azurerm_key_vault_secret" "docker-username" {
   key_vault_id = data.azurerm_key_vault.keyvault.id
 }
 
-output "docker-username" {
-  value     = data.azurerm_key_vault_secret.docker-username.value
-  sensitive = true
+data "azurerm_key_vault_secret" "grafana-password" {
+  name         = "grafana-password"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+data "azurerm_key_vault_secret" "grafana-username" {
+  name         = "grafana-username"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
+}
+
+data "azurerm_key_vault_secret" "vm-username" {
+  name         = "vm-username"
+  key_vault_id = data.azurerm_key_vault.keyvault.id
 }
 
 #=====================================================
@@ -145,8 +104,8 @@ module "backend" {
   source = "./modules/backend"
   vnet_name = azurerm_virtual_network.vnet.name
   frontend_subnet = azurerm_subnet.frontend_subnet
-  docker_username = var.DOCKER_USERNAME
-  docker_password = var.DOCKER_PASSWORD
+  docker_username = data.azurerm_key_vault_secret.docker-username.value
+  docker_password = data.azurerm_key_vault_secret.docker-password.value
   depends_on = [ azurerm_resource_group.resource_group ]
 }
 
@@ -163,8 +122,8 @@ module "bastion" {
 module "frontend" {
   source = "./modules/frontend"
   vnet_name = azurerm_virtual_network.vnet.name
-  docker_password = var.DOCKER_PASSWORD
-  docker_username = var.DOCKER_USERNAME
+  docker_password = data.azurerm_key_vault_secret.docker-password.value
+  docker_username = data.azurerm_key_vault_secret.docker-username.value
   fronend_subnet_id = azurerm_subnet.frontend_subnet.id
   depends_on = [ azurerm_resource_group.resource_group ]
 }
@@ -176,6 +135,9 @@ module "db" {
   vnet = azurerm_virtual_network.vnet
   db_connection_subnet_adress_prefixes = ["22.0.3.0/24"]
   db_server_subnet_adress_prefixes = ["22.0.4.0/24"]
+  database_login = data.azurerm_key_vault_secret.database-login.value
+  database_password = data.azurerm_key_vault_secret.database-password.value
+  database_name = data.azurerm_key_vault_secret.database-name.value
   depends_on = [ azurerm_resource_group.resource_group ]
 }
 
@@ -190,13 +152,14 @@ resource "azurerm_subnet" "monitoring_subnet" {
 module "monitoring" {
   source = "./modules/monitoring"
   monitoring_subnet_id = azurerm_subnet.monitoring_subnet.id
-  docker_password = var.DOCKER_PASSWORD
-  docker_username = var.DOCKER_USERNAME
-  grafana_username = var.GRAFANA_USERNAME
-  grafana_password = var.GRAFANA_PASSWORD
+  docker_password = data.azurerm_key_vault_secret.docker-password.value
+  docker_username = data.azurerm_key_vault_secret.docker-username.value
+  grafana_username = data.azurerm_key_vault_secret.grafana-username.value
+  grafana_password = data.azurerm_key_vault_secret.grafana-password.value
   storage_account_name = azurerm_storage_account.storage_account.name
   storage_account_key = azurerm_storage_account.storage_account.primary_access_key
   container_name = azurerm_storage_container.storage_container.name
+  vm_username = data.azurerm_key_vault_secret.vm-username.value
   public_key_location = "${path.root}/keys"
   cloud_init_location = "${path.root}/cloud-init-monitoring.yml"
 }
