@@ -101,7 +101,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
           storage_account_key  = var.storage_account_key,
           container_name       = var.container_name
         })),
-        # LOKI_CONFIG = base64encode(file("${path.module}/loki-config.yaml")),
+        DATA_SOURCE      = base64encode(file("${path.module}/datasource.yaml")),
         GRAFANA_USERNAME = var.grafana_username,
         GRAFANA_PASSWORD = var.grafana_password,
      }))
