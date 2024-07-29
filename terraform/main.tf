@@ -7,14 +7,14 @@ terraform {
       version = "=3.112.0"
     }
   }
-  #   backend "azurerm" {
-  #   subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
-  #   resource_group_name  = "rg-int-dev-westeurope-001"
-  #   storage_account_name = "interntfstatestore"                   
-  #   container_name       = "statefilecontainer"
-  #   key                  = "jakubkoz/workspace/terrafrom.tfstate"
-  #   tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
-  # }
+    backend "azurerm" {
+    subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
+    resource_group_name  = "group1-keyvault"
+    storage_account_name = "group1storageaccountlogs"                   
+    container_name       = "tfstate"
+    key                  = "terrafrom.tfstate"
+    tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
+  }
 }
 
 # Configure the Microsoft Azure Provider
@@ -106,7 +106,7 @@ module "backend" {
   frontend_subnet = azurerm_subnet.frontend_subnet
   docker_username = data.azurerm_key_vault_secret.docker-username.value
   docker_password = data.azurerm_key_vault_secret.docker-password.value
-  depends_on = [ azurerm_resource_group.resource_group ]
+  depends_on = [ azurerm_resource_group.resource_group, module.db ]
 }
 
 #========================================================
