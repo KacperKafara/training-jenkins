@@ -46,7 +46,7 @@ module "vm" {
   docker_password = var.docker_password
   docker_username = var.docker_username
   public_key_location = "${path.root}/keys"
-  cloud_init_location = "${path.module}/cloud-init.yml"
+  cloud_init_location = "${path.root}/cloud-init.yml"
   depends_on = [ module.nat ]
 }
 

@@ -74,7 +74,7 @@ data "azurerm_key_vault_secret" "database-password" {
 }
 
 data "azurerm_key_vault_secret" "docker-password" {
-  name         = "docker-password"
+  name         = "docker-password1"
   key_vault_id = data.azurerm_key_vault.keyvault.id
 }
 
@@ -156,9 +156,9 @@ module "monitoring" {
   docker_username = data.azurerm_key_vault_secret.docker-username.value
   grafana_username = data.azurerm_key_vault_secret.grafana-username.value
   grafana_password = data.azurerm_key_vault_secret.grafana-password.value
-  storage_account_name = azurerm_storage_account.storage_account.name
-  storage_account_key = azurerm_storage_account.storage_account.primary_access_key
-  container_name = azurerm_storage_container.storage_container.name
+  storage_account_name = data.azurerm_storage_account.storage_account.name
+  storage_account_key = data.azurerm_storage_account.storage_account.primary_access_key
+  container_name = data.azurerm_storage_container.storage_container.name
   vm_username = data.azurerm_key_vault_secret.vm-username.value
   public_key_location = "${path.root}/keys"
   cloud_init_location = "${path.root}/cloud-init-monitoring.yml"
@@ -186,7 +186,7 @@ data "azurerm_resource_group" "resource_group_keyvault" {
 
 data "azurerm_storage_account" "storage_account" {
   name                = "group1storageaccountlogs"
-  resource_group_name = azurerm_resource_group.resource_group_keyvault.name
+  resource_group_name = data.azurerm_resource_group.resource_group_keyvault.name
 }
 
 data "azurerm_storage_container" "storage_container" {

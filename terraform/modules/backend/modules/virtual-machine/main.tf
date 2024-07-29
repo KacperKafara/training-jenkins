@@ -59,9 +59,9 @@ resource "azurerm_linux_virtual_machine" "vm" {
     "idemia:cpe:auto:poweroffrange" = "19:00!"
   }
 
-  custom_data = base64encode(templatefile(var.cloud_init_location, {
+  custom_data = base64encode(templatefile("cloud-init.yml", {
        DOCKER_USERNAME = var.docker_username,
-       DOCKER_PASSWORD = var.docker_password,
-       PROMTAIL_CONFIG = file("${path.module}/promtail-config.yml")
+       DOCKER_PASSWORD = var.docker_password
+      #  PROMTAIL_CONFIG = file("${path.module}/promtail-config.yml")
      }))
 }

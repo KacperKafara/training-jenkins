@@ -17,18 +17,3 @@ variable "GRAFANA_PASSWORD" {
   description = "grafana password"
   type = string
 }
-
-variable "DATABASE_LOGIN" {
-  description = "postgres admin login"
-  type = string
-}
-
-variable "DATABASE_PASSWORD" {
-  description = "postgres admin password"
-  type = string
-}
-
-variable "DATABASE_NAME" {
-  description = "postgres database name"
-  type = string
-}
