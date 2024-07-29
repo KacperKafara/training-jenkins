@@ -12,7 +12,7 @@ variable "location" {
 
 variable "monitoring_subnet_id" {
     type = string
-    description = "Id of the subnet connecting load balancer and the vm's"
+    description = "Id of the subnet connecting monitoring with the rest of the infrastructure"
 }
 
 variable "vm_count" {

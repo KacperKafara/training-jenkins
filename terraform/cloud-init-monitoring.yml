@@ -15,15 +15,15 @@ packages:
   - unattended-upgrades
 
 write_files:
-  - path: /home/adminuser/loki-config.yml
+  - path: /home/adminuser/loki-config-base64.yml
     content: |
       ${LOKI_CONFIG}
 
 runcmd:
+  - cat /home/adminuser/loki-config-base64.yml | base64 --decode > /home/adminuser/loki-config.yml
   - docker login parkanizeracr2024.azurecr.io -u ${DOCKER_USERNAME} -p ${DOCKER_PASSWORD}
   - docker pull parkanizeracr2024.azurecr.io/monitoring/loki:2.9.2
   - docker pull parkanizeracr2024.azurecr.io/monitoring/grafana:9.2.6
   - docker run -d --name=loki -p 3100:3100 -v /home/adminuser/loki-config.yml:/etc/loki/local-config.yml parkanizeracr2024.azurecr.io/monitoring/loki:2.9.2 -config.file=/etc/loki/local-config.yml
   - docker run -d --name=grafana -p 3000:3000 -v grafana-storage:/var/lib/grafana -e GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD} parkanizeracr2024.azurecr.io/monitoring/grafana:9.2.6
-  
 final_message: "The system is finally up, after $UPTIME seconds"
