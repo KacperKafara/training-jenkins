@@ -7,14 +7,14 @@ terraform {
       version = "=3.112.0"
     }
   }
-    backend "azurerm" {
-    subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
-    resource_group_name  = "rg-int-dev-westeurope-001"
-    storage_account_name = "interntfstatestore"                   
-    container_name       = "statefilecontainer"
-    key                  = "jakubkoz/workspace/terrafrom.tfstate"
-    tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
-  }
+  #   backend "azurerm" {
+  #   subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
+  #   resource_group_name  = "rg-int-dev-westeurope-001"
+  #   storage_account_name = "interntfstatestore"                   
+  #   container_name       = "statefilecontainer"
+  #   key                  = "jakubkoz/workspace/terrafrom.tfstate"
+  #   tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
+  # }
 }
 
 # Configure the Microsoft Azure Provider
@@ -234,8 +234,8 @@ data "azurerm_storage_container" "storage_container" {
 
 #=====================================================
 
-module "acr_peer" {
-  source = "./modules/acr-connection"
-  vnet = azurerm_virtual_network.vnet
-  depends_on = [ azurerm_resource_group.resource_group ]
-}
+# module "acr_peer" {
+#   source = "./modules/acr-connection"
+#   vnet = azurerm_virtual_network.vnet
+#   depends_on = [ azurerm_resource_group.resource_group ]
+# }
