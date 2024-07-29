@@ -7,14 +7,14 @@ terraform {
       version = "=3.112.0"
     }
   }
-    backend "azurerm" {
-    subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
-    resource_group_name  = "rg-int-dev-westeurope-001"
-    storage_account_name = "interntfstatestore"                   
-    container_name       = "statefilecontainer"
-    key                  = "jakubkoz/workspace/terrafrom.tfstate"
-    tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
-  }
+  #   backend "azurerm" {
+  #   subscription_id      = "72e2720e-f496-43c7-ab41-8a74e03960e5"
+  #   resource_group_name  = "rg-int-dev-westeurope-001"
+  #   storage_account_name = "interntfstatestore"                   
+  #   container_name       = "statefilecontainer"
+  #   key                  = "jakubkoz/workspace/terrafrom.tfstate"
+  #   tenant_id            = "14f31f9a-039a-412c-a460-17911d339497"
+  # }
 }
 
 # Configure the Microsoft Azure Provider
@@ -165,24 +165,40 @@ module "monitoring" {
 }
 
 # Create storage account wiht blob container for loki logs storage
-resource "azurerm_storage_account" "storage_account" {
-  name                     = "storageaccount"
-  resource_group_name      = azurerm_resource_group.resource_group.name
-  location                 = azurerm_resource_group.resource_group.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+# resource "azurerm_storage_account" "storage_account" {
+#   name                     = "${azurerm_resource_group.resource_group.name}storageaccountlogs" 
+#   resource_group_name      = azurerm_resource_group.resource_group.name
+#   location                 = azurerm_resource_group.resource_group.location
+#   account_tier             = "Standard"
+#   account_replication_type = "LRS"
+# }
+
+# resource "azurerm_storage_container" "storage_container" {
+#   name                  = "log-container"
+#   storage_account_name  = azurerm_storage_account.storage_account.name
+#   container_access_type = "private"
+# }
+
+data "azurerm_resource_group" "resource_group_keyvault" {
+  name = "group1-keyvault"
 }
 
-resource "azurerm_storage_container" "storage_container" {
-  name                  = "log-container"
-  storage_account_name  = azurerm_storage_account.storage_account.name
-  container_access_type = "private"
+
+data "azurerm_storage_account" "storage_account" {
+  name                = "group1storageaccountlogs"
+  resource_group_name = azurerm_resource_group.resource_group_keyvault.name
 }
+
+data "azurerm_storage_container" "storage_container" {
+  name                 = "log-container"
+  storage_account_name = data.azurerm_storage_account.storage_account.name
+}
+
 
 #=====================================================
 
-module "acr_peer" {
-  source = "./modules/acr-connection"
-  vnet = azurerm_virtual_network.vnet
-  depends_on = [ azurerm_resource_group.resource_group ]
-}
+# module "acr_peer" {
+#   source = "./modules/acr-connection"
+#   vnet = azurerm_virtual_network.vnet
+#   depends_on = [ azurerm_resource_group.resource_group ]
+# }
