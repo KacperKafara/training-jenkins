@@ -1,4 +1,6 @@
 def call(def pipelineParams = [:]) {
+  def regions = pipelineParams.regions
+
   pipeline {
     agent any
 
@@ -7,9 +9,34 @@ def call(def pipelineParams = [:]) {
     }
 
     stages {
-        stage('Hello') {
-            steps {
-                echo "$pipelineParams.msg"
+        stage('elo') {
+          steps {
+            script {
+              echo "elo"
+            }
+          }
+        }
+
+        stage('operations') {
+            parallel {
+              script {
+                regions.each { region -> {
+                  stage("init-$region") {
+                    steps {
+                      script {
+                        echo "init-$region"
+                      }
+                    }
+                  }
+                  stage("plan-$region") {
+                    steps {
+                      script {
+                        echo "plan-$region"
+                      }
+                    }
+                  }
+                }}
+              }
             }
         }
     }
