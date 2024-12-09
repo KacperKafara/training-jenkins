@@ -1,5 +1,6 @@
-def call(def pipelineParams = [:]) {
-  def regions = pipelineParams.regions
+def call(body) {
+  def regions = body.terragrunt.regions
+  body()
 
   node {
     timestamps {
