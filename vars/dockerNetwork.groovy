@@ -18,26 +18,30 @@ def call(def pipelineParams = [:]) {
         }
 
         stage('operations') {
-            parallel {
-              script {
-                regions.each { region -> {
-                  stage("init-$region") {
-                    steps {
-                      script {
-                        echo "init-$region"
+          steps {
+            script {
+              parallel {
+                script {
+                  regions.each { region ->
+                    stage("init-$region") {
+                      steps {
+                        script {
+                          echo "init-$region"
+                        }
+                      }
+                    }
+                    stage("plan-$region") {
+                      steps {
+                        script {
+                          echo "plan-$region"
+                        }
                       }
                     }
                   }
-                  stage("plan-$region") {
-                    steps {
-                      script {
-                        echo "plan-$region"
-                      }
-                    }
-                  }
-                }}
+                }
               }
             }
+          }
         }
     }
   }
