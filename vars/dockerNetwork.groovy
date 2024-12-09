@@ -1,3 +1,13 @@
-def isDockerNetworkExists(String networkName) {
-  return !sh(script: "docker network inspect ${networkName} > /dev/null 2>&1", returnStatus: true)
+def call(def pipelineParams = [:]) {
+  pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo "$pipelineParams.msg"
+            }
+        }
+    }
+  }
 }
