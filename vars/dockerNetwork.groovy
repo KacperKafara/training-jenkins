@@ -4,6 +4,12 @@ def call(body) {
   body.delegate = config
   body()
 
+  if (!config.terragrunt?.regions) {
+    echo "${config}"
+    echo "${config.terragrunt}"
+    error "Missing required property: terragrunt.regions"
+  }
+
   def regions = config.terragrunt.regions
 
   node {
