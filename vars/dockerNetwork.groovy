@@ -9,7 +9,8 @@ def call(body) {
   node {
     timestamps {
       stage("test") {
-        echo "test"
+        echo "${regions}"
+        echo "${config}"
       }
 
       parallel regions.collectEntries { region ->
