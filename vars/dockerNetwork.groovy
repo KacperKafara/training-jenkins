@@ -1,6 +1,10 @@
 def call(body) {
-  def regions = body.terragrunt.regions
+  def config = [:]
+  body.resolveStrategy = Closure.DELEGATE_FIRST
+  body.delegate = config
   body()
+
+  def regions = config.terragrunt.regions
 
   node {
     timestamps {
