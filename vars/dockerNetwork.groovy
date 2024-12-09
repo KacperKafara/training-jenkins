@@ -1,48 +1,25 @@
 def call(def pipelineParams = [:]) {
   def regions = pipelineParams.regions
 
-  pipeline {
-    agent any
+  node {
+    timestamps {
+      stage("test") {
+        echo "test"
+      }
 
-    options {
-      lock(resource: "azure-terragrunt-lock")
-    }
-
-    stages {
-        stage('elo') {
-          steps {
-            script {
-              echo "elo"
+      parallel regions.collectEntries { region ->
+        ["$region": {
+          def workingDir = region
+          lock(resource: "terragrunt-${region}") {
+            stage("Init - $region") {
+              echo "Init - $region"
+            }
+            stage("Plan - $region") {
+              echo "Plan - $region"
             }
           }
-        }
-
-        stage('operations') {
-          steps {
-            script {
-              parallel {
-                script {
-                  regions.each { region ->
-                    stage("init-$region") {
-                      steps {
-                        script {
-                          echo "init-$region"
-                        }
-                      }
-                    }
-                    stage("plan-$region") {
-                      steps {
-                        script {
-                          echo "plan-$region"
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+        }]
+      }
     }
   }
 }
