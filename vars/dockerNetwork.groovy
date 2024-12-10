@@ -1,22 +1,15 @@
 def call(body) {
-  def config = [:]
+  def pipelineParams= [:]
   body.resolveStrategy = Closure.DELEGATE_FIRST
-  body.delegate = config
+  body.delegate = pipelineParams
   body()
 
-  if (!config.terragrunt?.regions) {
-    echo "${config}"
-    echo "${config.terragrunt}"
-    error "Missing required property: terragrunt.regions"
-  }
-
-  def regions = config.terragrunt.regions
+  def regions = pipelineParams.terragrunt.regions
 
   node {
     timestamps {
       stage("test") {
-        echo "${regions}"
-        echo "${config}"
+        echo "${pipelineParams}"
       }
 
       parallel regions.collectEntries { region ->
