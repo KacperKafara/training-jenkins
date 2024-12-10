@@ -15,7 +15,7 @@ def call(body) {
       parallel regions.collectEntries { region ->
         ["$region": {
           def workingDir = region
-          lock(resource: "terragrunt-${region}") {
+          lock(resource: "terragrunt-${region}${pipelineParams.terragrunt.subscription}") {
             stage("Init - $region") {
               echo "Init - $region"
             }
