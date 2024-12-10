@@ -17,6 +17,9 @@ def call(body) {
           def workingDir = region
           lock(resource: "terragrunt-${region}${pipelineParams.terragrunt.subscription}") {
             stage("Init - $region") {
+              sh '''
+                sleep 20
+              '''
               echo "Init - $region"
             }
             stage("Plan - $region") {
