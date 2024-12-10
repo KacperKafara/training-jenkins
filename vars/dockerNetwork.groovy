@@ -4,7 +4,7 @@ def call(body) {
   body.delegate = pipelineParams
   body()
 
-  def regions = pipelineParams.terragrunt.regions
+  def regions = pipelineParams.regions
 
   node {
     timestamps {
